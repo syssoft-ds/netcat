@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Main {
+public class UDP_Aufgabe2 {
 
     private static class InstanceInfo {
         String ip;

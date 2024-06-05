@@ -1,0 +1,25 @@
+TCP:
+65	3.519892	127.0.0.1	127.0.0.1	TCP	50	20655 → 54321 [PSH, ACK] Seq=1 Ack=1 Win=2619648 Len=6
+66	3.519919	127.0.0.1	127.0.0.1	TCP	44	54321 → 20655 [ACK] Seq=1 Ack=7 Win=2619648 Len=0
+test
+
+73	8.726295	127.0.0.1	127.0.0.1	TCP	57	20655 → 54321 [PSH, ACK] Seq=7 Ack=1 Win=2619648 Len=13
+74	8.726316	127.0.0.1	127.0.0.1	TCP	44	54321 → 20655 [ACK] Seq=1 Ack=20 Win=2619648 Len=0
+hallohallo4
+
+UDP:
+206	109.004286	127.0.0.1	127.0.0.1	UDP	43	62644 → 54321 Len=11
+hallohallo4
+
+166	81.571925	127.0.0.1	127.0.0.1	UDP	36	62644 → 54321 Len=4
+test
+
+Aufgabe 1:
+Die beiden Programme sind TCP-/UDP-Implementierungen eines einfachen Client-Server-Systems. Beide Programme senden und empfangen Nachrichten, dies tun sie aber auf unterschiedliche Weise.
+
+TCP (Transmission Control Protocol) ist ein verbindungsorientiertes Protokoll. Das bedeutet, dass vor dem Senden von Daten eine Verbindung zwischen Client und Server hergestellt wird. Diese Verbindung bleibt bestehen, bis sie explizit geschlossen wird.
+Wie in den von mir aufgezeichneten Packeten oben zu sehen, wird bei UDP jeweils nur eine Nachricht an den anderen Port geschickt (Als Ip verwende ich hier die lokale Loop-Back-Adresse) und bei TCP gibt es jeweils noch eine Antwort (in Form eines Packages) welches den Erhalt der Nachricht bestätigt.
+
+Die Hauptunterschiede zwischen den beiden Programmen liegen in der Art und Weise, wie sie Nachrichten senden und empfangen. Das TCP-Programm stellt eine Verbindung her und erhält Bestätigungen für gesendete Daten, während das UDP-Programm einfach Daten sendet, ohne eine Verbindung herzustellen oder Bestätigungen zu erhalten.
+
+Die Gemeinsamkeiten zwischen den beiden Programmen liegen in ihrer grundlegenden Funktion: Sie senden und empfangen Nachrichten über ein Netzwerk. Beide verwenden die gleiche grundlegende Methode zum Lesen von Nachrichten von der Standard-Eingabe und zum Senden dieser Nachrichten an einen Server.
