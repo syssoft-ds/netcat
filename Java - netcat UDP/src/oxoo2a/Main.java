@@ -6,8 +6,22 @@ import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main {
+
+    private static class InstanceInfo {
+        String ip;
+        int port;
+
+        InstanceInfo(String ip, int port) {
+            this.ip = ip;
+            this.port = port;
+        }
+    }
+
+    private static Map<String, InstanceInfo> instances = new HashMap<>();
 
     private static void fatal ( String comment ) {
         System.out.println(comment);
@@ -32,32 +46,65 @@ public class Main {
     // ************************************************************************
     // listenAndTalk
     // ************************************************************************
-    private static void listenAndTalk ( int port ) throws IOException  {
+    private static void registerInstance(String name, String ip, int port) {
+        System.out.println("Registering instance: " + name + ", " + ip + ", " + port);
+        instances.put(name, new InstanceInfo(ip, port));
+    }
+
+    private static void sendMessage(String name, String message) throws IOException {
+        InstanceInfo info = instances.get(name);
+        if (info == null) {
+            System.out.println("Unknown instance: " + name);
+            return;
+        }
+
+        InetAddress other_address = InetAddress.getByName(info.ip);
+        DatagramSocket s = new DatagramSocket();
+        byte[] buffer = message.getBytes("UTF-8");
+        DatagramPacket p = new DatagramPacket(buffer, buffer.length, other_address, info.port);
+        s.send(p);
+        s.close();
+    }
+
+    private static void listenAndTalk(int port) throws IOException {
         DatagramSocket s = new DatagramSocket(port);
         byte[] buffer = new byte[packetSize];
         String line;
         do {
-            DatagramPacket p = new DatagramPacket(buffer,buffer.length);
+            DatagramPacket p = new DatagramPacket(buffer, buffer.length);
             s.receive(p);
-            line = new String(buffer,0,p.getLength(),"UTF-8");
+            line = new String(buffer, 0, p.getLength(), "UTF-8");
             System.out.println(line);
         } while (!line.equalsIgnoreCase("stop"));
         s.close();
     }
 
-    // ************************************************************************
-    // connectAndTalk
-    // ************************************************************************
-    private static void connectAndTalk ( String other_host, int other_port ) throws IOException {
+    private static void connectAndTalk(String other_host, int other_port) throws IOException {
         InetAddress other_address = InetAddress.getByName(other_host);
         DatagramSocket s = new DatagramSocket();
         byte[] buffer = new byte[packetSize];
         String line;
         do {
             line = readString();
-            buffer = line.getBytes("UTF-8");
-            DatagramPacket p = new DatagramPacket(buffer,buffer.length,other_address,other_port);
-            s.send(p);
+            if (line.startsWith("register ")) {
+                String[] parts = line.split(" ");
+                if (parts.length != 4) {
+                    System.out.println("Invalid register command");
+                } else {
+                    registerInstance(parts[1], parts[2], Integer.parseInt(parts[3]));
+                }
+            } else if (line.startsWith("send ")) {
+                String[] parts = line.split(" ", 3);
+                if (parts.length != 3) {
+                    System.out.println("Invalid send command");
+                } else {
+                    sendMessage(parts[1], parts[2]);
+                }
+            } else {
+                buffer = line.getBytes("UTF-8");
+                DatagramPacket p = new DatagramPacket(buffer, buffer.length, other_address, other_port);
+                s.send(p);
+            }
         } while (!line.equalsIgnoreCase("stop"));
         s.close();
     }
