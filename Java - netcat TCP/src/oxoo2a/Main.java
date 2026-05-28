@@ -5,89 +5,118 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Main {
 
-    private static void fatal ( String comment ) {
-        System.out.println(comment);
-        System.exit(-1);
-    }
-
-    // ************************************************************************
+    // **********************************************************************
     // MAIN
-    // ************************************************************************
-    public static void main(String[] args) throws IOException {
-        if (args.length != 2)
-            fatal("Usage: \"<netcat> -l <port>\" or \"netcat <ip> <port>\"");
-        int port = Integer.parseInt(args[1]);
-        if (args[0].equalsIgnoreCase("-l"))
-            Server(port);
-        else
-            Client(args[0],port);
-    }
+    // **********************************************************************
+    public static void main(String[] args) throws Exception {
 
-    // ************************************************************************
-    // Server
-    // ************************************************************************
-    private static void Server ( int port ) throws IOException {
-        ServerSocket s = new ServerSocket(port);
-        while (true) {
-            Socket client = s.accept();
-            Thread t = new Thread(() -> serveClient(client));
-            t.start();
-        }
-    }
-
-    private static void serveClient ( Socket clientConnection ) {
-        try {
-            BufferedReader r = new BufferedReader(new InputStreamReader(clientConnection.getInputStream()));
-            String line;
-            do {
-                line = r.readLine();
-                System.out.println(line);
-            } while (!line.equalsIgnoreCase("stop"));
-            clientConnection.close();
-        }
-        catch (IOException e) {
-            System.out.println("There was an IOException while receiving data ...");
+        if (args.length != 2) {
+            System.out.println(
+                    "Usage: java Main <server-ip> <server-port>");
             System.exit(-1);
         }
+
+        String serverHost = args[0];
+        int serverPort = Integer.parseInt(args[1]);
+
+        startClient(serverHost, serverPort);
     }
 
-    // ************************************************************************
-    // Client
-    // ************************************************************************
-    private static void Client ( String serverHost, int serverPort ) throws IOException {
-        InetAddress serverAddress = InetAddress.getByName(serverHost);
-        Socket serverConnect = new Socket(serverAddress,serverPort);
-        PrintWriter w = new PrintWriter(serverConnect.getOutputStream(),true);
+    // **********************************************************************
+    // CLIENT
+    // **********************************************************************
+    private static void startClient(
+            String serverHost,
+            int serverPort) throws IOException {
+
+        InetAddress serverAddress =
+                InetAddress.getByName(serverHost);
+
+        Socket socket =
+                new Socket(serverAddress, serverPort);
+
+        System.out.println(
+                "Verbunden mit Server "
+                        + serverHost
+                        + ":"
+                        + serverPort);
+
+        // Zum Senden
+        PrintWriter writer =
+                new PrintWriter(
+                        socket.getOutputStream(),
+                        true);
+
+        // Zum Empfangen
+        BufferedReader reader =
+                new BufferedReader(
+                        new InputStreamReader(
+                                socket.getInputStream()));
+
+        // Thread für Empfang starten
+        Receiver receiver =
+                new Receiver(reader);
+
+        receiver.start();
+
+        // Tastatureingaben lesen
+        BufferedReader keyboard =
+                new BufferedReader(
+                        new InputStreamReader(System.in));
+
         String line;
-        do {
-            line = readString();
-            w.println(line);
-        } while (!line.equalsIgnoreCase("stop"));
-        serverConnect.close();
+
+        while (true) {
+
+            line = keyboard.readLine();
+
+            if (line == null)
+                continue;
+
+            // Nachricht senden
+            writer.println(line);
+
+            // Verbindung beenden
+            if (line.equalsIgnoreCase("stop")) {
+                socket.close();
+                System.exit(0);
+            }
+        }
     }
 
-    private static String readString () {
-        boolean again = false;
-        String input = null;
-        do {
-            // System.out.print("Input: ");
+    // **********************************************************************
+    // RECEIVER THREAD
+    // **********************************************************************
+    static class Receiver extends Thread {
+
+        private BufferedReader reader;
+
+        public Receiver(BufferedReader reader) {
+            this.reader = reader;
+        }
+
+        @Override
+        public void run() {
+
+            String line;
+
             try {
-                if (br == null)
-                    br = new BufferedReader(new InputStreamReader(System.in));
-                input = br.readLine();
-            }
-            catch (Exception e) {
-                System.out.printf("Exception: %s\n",e.getMessage());
-                again = true;
-            }
-        } while (again);
-        return input;
-    }
 
-    private static BufferedReader br = null;
+                while ((line = reader.readLine()) != null) {
+
+                    System.out.println(
+                            "\n[SERVER] " + line);
+                }
+
+            } catch (IOException e) {
+
+                System.out.println(
+                        "Verbindung zum Server beendet.");
+            }
+        }
+    }
 }
