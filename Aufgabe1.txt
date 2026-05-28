@@ -1,0 +1,23 @@
+Beide Programme dienen dem Austausch von Nachrichten zwischen zwei Rechnern bzw. Prozessen über ein Netzwerk. 
+Sowohl TCP als auch UDP verwenden dabei das Internet Protocol und arbeiten mit Portnummern, um die Daten dem richtigen Programm zuzuordnen.
+
+In beiden Aufzeichnungen war sichtbar, dass die Datenpakete über die lokale IP-Adresse und den gewählten Port übertragen wurden. 
+
+Unterschiede zwischen TCP und UDP:
+
+Der wichtigste Unterschied besteht darin, dass TCP verbindungsorientiert arbeitet, UDP aber verbindungslos ist.
+
+TCP
+
+Beim TCP-Programm war in Wireshark zunächst ein Verbindungsaufbau in Form eines Three-Way-Handshackes sichtbar.
+In der PCAP-Datei sind diese Pakete direkt vor der eigentlichen Datenübertragung zu erkennen. Erst nach diesem Handshake werden Nachrichten übertragen.
+Zusätzlich enthält TCP Bestätigungen (ACK-Pakete), mit denen der Empfänger bestätigt, dass Daten erfolgreich angekommen sind.
+Beim Beenden der Verbindung waren außerdem FIN- und ACK-Pakete sichtbar, die zum kontrollierten Verbindungsabbau dienen.
+
+UDP
+
+Beim UDP-Programm war kein Verbindungsaufbau sichtbar. Nach dem Start des Programms wurden die Nachrichten sofort als UDP-Pakete versendet.
+In der PCAP-Datei sind daher lediglich einzelne UDP-Datagramme zu sehen.
+
+Dadurch ist UDP schneller und erzeugt weniger Overhead, bietet jedoch keine Garantie dafür, dass Pakete tatsächlich ankommen oder in der richtigen Reihenfolge verarbeitet werden.
+

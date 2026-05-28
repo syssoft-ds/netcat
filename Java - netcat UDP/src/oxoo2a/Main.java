@@ -9,77 +9,137 @@ import java.net.InetAddress;
 
 public class Main {
 
-    private static void fatal ( String comment ) {
-        System.out.println(comment);
-        System.exit(-1);
-    }
+    private static final int PACKET_SIZE = 4096;
 
-    // ************************************************************************
+    // **********************************************************************
     // MAIN
-    // ************************************************************************
-    public static void main(String[] args) throws IOException {
-        if (args.length != 2)
-            fatal("Usage: \"<netcat> -l <port>\" or \"netcat <ip> <port>\"");
-        int port = Integer.parseInt(args[1]);
-        if (args[0].equalsIgnoreCase("-l"))
-            listenAndTalk(port);
-        else
-            connectAndTalk(args[0],port);
-    }
+    // **********************************************************************
+    public static void main(String[] args) throws Exception {
 
-    private static final int packetSize = 4096;
+        if (args.length != 1) {
+            System.out.println("Usage: java Main <listening-port>");
+            System.exit(-1);
+        }
 
-    // ************************************************************************
-    // listenAndTalk
-    // ************************************************************************
-    private static void listenAndTalk ( int port ) throws IOException  {
-        DatagramSocket s = new DatagramSocket(port);
-        byte[] buffer = new byte[packetSize];
-        String line;
-        do {
-            DatagramPacket p = new DatagramPacket(buffer,buffer.length);
-            s.receive(p);
-            line = new String(buffer,0,p.getLength(),"UTF-8");
-            System.out.println(line);
-        } while (!line.equalsIgnoreCase("stop"));
-        s.close();
-    }
+        int myPort = Integer.parseInt(args[0]);
 
-    // ************************************************************************
-    // connectAndTalk
-    // ************************************************************************
-    private static void connectAndTalk ( String other_host, int other_port ) throws IOException {
-        InetAddress other_address = InetAddress.getByName(other_host);
-        DatagramSocket s = new DatagramSocket();
-        byte[] buffer = new byte[packetSize];
-        String line;
-        do {
-            line = readString();
-            buffer = line.getBytes("UTF-8");
-            DatagramPacket p = new DatagramPacket(buffer,buffer.length,other_address,other_port);
-            s.send(p);
-        } while (!line.equalsIgnoreCase("stop"));
-        s.close();
-    }
+        DatagramSocket socket = new DatagramSocket(myPort);
 
-    private static String readString () {
-        BufferedReader br = null;
-        boolean again = false;
-        String input = null;
-        do {
-            // System.out.print("Input: ");
-            try {
-                if (br == null)
-                    br = new BufferedReader(new InputStreamReader(System.in));
-                input = br.readLine();
+        System.out.println("UDP Chat gestartet auf Port " + myPort);
+
+        // Thread zum Empfangen starten
+        Receiver receiver = new Receiver(socket);
+        receiver.start();
+
+        // Hauptthread zum Senden
+        BufferedReader br =
+                new BufferedReader(new InputStreamReader(System.in));
+
+        while (true) {
+
+            String input = br.readLine();
+
+            if (input == null)
+                continue;
+
+            if (input.equalsIgnoreCase("stop")) {
+                socket.close();
+                System.exit(0);
             }
-            catch (Exception e) {
-                System.out.printf("Exception: %s\n",e.getMessage());
-                again = true;
+
+            /*
+             * Erwartetes Format:
+             * send <IP> <PORT> <Nachricht>
+             */
+
+            if (input.startsWith("send ")) {
+
+                String[] parts = input.split(" ", 4);
+
+                if (parts.length < 4) {
+                    System.out.println(
+                            "Format: send <IP> <PORT> <Nachricht>");
+                    continue;
+                }
+
+                String ip = parts[1];
+                int port = Integer.parseInt(parts[2]);
+                String message = parts[3];
+
+                byte[] buffer = message.getBytes("UTF-8");
+
+                InetAddress address = InetAddress.getByName(ip);
+
+                DatagramPacket packet =
+                        new DatagramPacket(
+                                buffer,
+                                buffer.length,
+                                address,
+                                port);
+
+                socket.send(packet);
+
+                System.out.println(
+                        "Nachricht gesendet an "
+                                + ip + ":" + port);
             }
-        } while (again);
-        return input;
+            else {
+                System.out.println(
+                        "Ungültiger Befehl!");
+                System.out.println(
+                        "Benutze: send <IP> <PORT> <Nachricht>");
+            }
+        }
     }
 
-    private BufferedReader br = null;
+    // **********************************************************************
+    // RECEIVER THREAD
+    // **********************************************************************
+    static class Receiver extends Thread {
+
+        private DatagramSocket socket;
+
+        public Receiver(DatagramSocket socket) {
+            this.socket = socket;
+        }
+
+        @Override
+        public void run() {
+
+            byte[] buffer = new byte[PACKET_SIZE];
+
+            while (true) {
+
+                try {
+
+                    DatagramPacket packet =
+                            new DatagramPacket(
+                                    buffer,
+                                    buffer.length);
+
+                    socket.receive(packet);
+
+                    String message =
+                            new String(
+                                    packet.getData(),
+                                    0,
+                                    packet.getLength(),
+                                    "UTF-8");
+
+                    System.out.println(
+                            "\nEmpfangen von "
+                                    + packet.getAddress().getHostAddress()
+                                    + ":"
+                                    + packet.getPort()
+                                    + " -> "
+                                    + message);
+
+                } catch (IOException e) {
+
+                    System.out.println("Socket geschlossen.");
+                    break;
+                }
+            }
+        }
+    }
 }
